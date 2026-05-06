@@ -9,27 +9,27 @@ window.APP_CONFIG = {
     MEDIA: [
         {
             type: "image",
-            src: "/public/foto1.jpg",
+            src: "/foto1.jpg",
             duration: 5000
         },
         {
             type: "image",
-            src: "/public/foto2.jpg",
+            src: "/foto2.jpg",
             duration: 5000
         },
         {
             type: "image",
-            src: "/public/foto3.jpg",
+            src: "/foto3.jpg",
             duration: 5000
         },
         {
             type: "image",
-            src: "/public/foto4.jpg",
+            src: "/foto4.jpg",
             duration: 5000
         },
         {
             type: "image",
-            src: "/public/foto5.jpg",
+            src: "/foto5.jpg",
             duration: 5000
         }
     ]
