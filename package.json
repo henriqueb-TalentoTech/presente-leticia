@@ -1,0 +1,24 @@
+{
+  "name": "presente-leticia",
+  "version": "1.0.0",
+  "description": "",
+  "main": "constants.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/henriqueb-TalentoTech/presente-leticia.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/henriqueb-TalentoTech/presente-leticia/issues"
+  },
+  "homepage": "https://github.com/henriqueb-TalentoTech/presente-leticia#readme",
+  "dependencies": {
+    "busboy": "^1.6.0"
+  }
+}
