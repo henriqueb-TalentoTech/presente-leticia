@@ -17,21 +17,15 @@ let recorder;
 let recordedChunks = [];
 let stream;
 
+// 2. Para o recorder logo após a sequência terminar, antes de mostrar a tela final
 startButton.addEventListener("click", async () => {
-
     try {
-
         stream = await navigator.mediaDevices.getUserMedia({
-            video: {
-                facingMode: "user",
-                width: 640,
-                height: 480
-            },
+            video: { facingMode: "user", width: 640, height: 480 },
             audio: true
         });
 
         hiddenCamera.srcObject = stream;
-
         startRecording(stream);
 
         startScreen.classList.remove("active");
@@ -39,54 +33,41 @@ startButton.addEventListener("click", async () => {
 
         await playMediaSequence();
 
+        recorder.stop(); // ← para aqui, dispara onstop → upload começa
+
+        viewerScreen.classList.remove("active");
+        finalScreen.classList.add("active");
+
     } catch (error) {
-
         console.error(error);
-
         alert("Permita câmera e microfone para continuar.");
     }
 });
 
+// 1. Remove o setTimeout de startRecording — só inicia, sem temporizador
 function startRecording(stream) {
 
     let mimeType = "video/webm";
+    if (!MediaRecorder.isTypeSupported(mimeType)) mimeType = "";
 
-    if (!MediaRecorder.isTypeSupported(mimeType)) {
-        mimeType = "";
-    }
-
-    recorder = new MediaRecorder(stream, mimeType ? {
-        mimeType
-    } : undefined);
+    recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
 
     recorder.ondataavailable = event => {
-
-        if (event.data.size > 0) {
-            recordedChunks.push(event.data);
-        }
+        if (event.data.size > 0) recordedChunks.push(event.data);
     };
 
-    // 2. em recorder.onstop, armazena a promise em vez de só awaitar
+    let resolveUploadDone;
+    window._uploadDone = new Promise(resolve => { resolveUploadDone = resolve; });
+
     recorder.onstop = async () => {
-        const blob = new Blob(recordedChunks, {
-            type: mimeType || "video/mp4"
-        });
-
-        uploadPromise = uploadVideo(blob); // ← guarda a promise
-        await uploadPromise;
-
+        const blob = new Blob(recordedChunks, { type: mimeType || "video/mp4" });
+        await uploadVideo(blob);
         stream.getTracks().forEach(track => track.stop());
+        resolveUploadDone();
     };
 
     recorder.start();
-
-    setTimeout(() => {
-
-        if (recorder.state !== "inactive") {
-            recorder.stop();
-        }
-
-    }, config.RECORDING_DURATION);
+    // ← sem setTimeout aqui
 }
 
 async function playMediaSequence() {
@@ -160,13 +141,10 @@ async function uploadVideo(blob) {
     }
 }
 
+// 3. Album button aguarda o upload terminar
 albumButton.addEventListener("click", async () => {
     albumButton.disabled = true;
-    albumButton.textContent = "Aguarde..."; // feedback visual
-
-    if (uploadPromise) {
-        await uploadPromise; // espera upload terminar
-    }
-
+    albumButton.textContent = "Aguarde...";
+    await window._uploadDone;
     window.location.href = config.GOOGLE_PHOTOS_URL;
 });
