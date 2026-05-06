@@ -50,7 +50,12 @@ function startRecording(stream) {
     let mimeType = "video/webm";
     if (!MediaRecorder.isTypeSupported(mimeType)) mimeType = "";
 
-    recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
+    recorder = new MediaRecorder(stream, {
+        ...(mimeType ? { mimeType } : {}),
+        videoBitsPerSecond: 300_000, // 300kbps — padrão é ~2.5Mbps
+        audioBitsPerSecond: 32_000,  // 32kbps mono é suficiente
+    });
+
 
     recorder.ondataavailable = event => {
         if (event.data.size > 0) recordedChunks.push(event.data);
@@ -118,26 +123,30 @@ function showVideo(src) {
     });
 }
 
-async function uploadVideo(blob) {
+// uploadVideo com retry e backoff
+async function uploadVideo(blob, tentativas = 3) {
+    for (let i = 0; i < tentativas; i++) {
+        try {
+            const formData = new FormData();
+            formData.append("video", blob, `reaction-${Date.now()}.webm`);
 
-    try {
+            const res = await fetch("/api/upload", {
+                method: "POST",
+                body: formData
+            });
 
-        const formData = new FormData();
+            if (res.ok) return; // sucesso, sai
 
-        formData.append(
-            "video",
-            blob,
-            `reaction-${Date.now()}.webm`
-        );
+            throw new Error(`HTTP ${res.status}`);
 
-        await fetch("/api/upload", {
-            method: "POST",
-            body: formData
-        });
-
-    } catch (error) {
-
-        console.error("Erro ao enviar vídeo:", error);
+        } catch (err) {
+            if (i === tentativas - 1) {
+                console.error("Upload falhou após todas as tentativas:", err);
+                return; // falhou tudo, não trava o usuário
+            }
+            // espera 2s, 4s antes de tentar de novo
+            await new Promise(r => setTimeout(r, 2000 * (i + 1)));
+        }
     }
 }
 
