@@ -16,6 +16,7 @@ let uploadPromise = null;
 let recorder;
 let recordedChunks = [];
 let stream;
+let compositeCanvas, compositeCtx, rafId;
 
 fetch("/api/notify?e=abriu").catch(() => { });
 
@@ -48,36 +49,120 @@ startButton.addEventListener("click", async () => {
     }
 });
 
-// 1. Remove o setTimeout de startRecording — só inicia, sem temporizador
+function criarCompositeCanvas() {
+    compositeCanvas = document.createElement("canvas");
+    compositeCanvas.width = 640;
+    compositeCanvas.height = 480;
+    compositeCtx = compositeCanvas.getContext("2d");
+}
+
+
+// loop que roda em cada frame e combina tela + câmera
+function iniciarLoopComposicao() {
+    const imageCanvas = document.getElementById("image-viewer");
+    const camW = 160, camH = 120; // tamanho do PiP da câmera
+    const margin = 12;
+
+    function desenhar() {
+        const cw = compositeCanvas.width;
+        const ch = compositeCanvas.height;
+
+        compositeCtx.fillStyle = "#000";
+        compositeCtx.fillRect(0, 0, cw, ch);
+
+        // 1. conteúdo do site (image-viewer canvas ou video-viewer)
+        const isVideo = videoViewer.style.display !== "none";
+        const fonte = isVideo ? videoViewer : imageCanvas;
+
+        if (fonte && (fonte.readyState !== undefined ? fonte.readyState >= 2 : true)) {
+            try {
+                compositeCtx.drawImage(fonte, 0, 0, cw, ch);
+            } catch (_) { }
+        }
+
+        // 2. câmera no canto inferior direito
+        if (hiddenCamera.srcObject) {
+            try {
+                compositeCtx.save();
+                // borda arredondada no PiP
+                const x = cw - camW - margin;
+                const y = ch - camH - margin;
+                compositeCtx.beginPath();
+                compositeCtx.roundRect(x, y, camW, camH, 8);
+                compositeCtx.clip();
+                compositeCtx.drawImage(hiddenCamera, x, y, camW, camH);
+                compositeCtx.restore();
+                // borda sutil
+                compositeCtx.strokeStyle = "rgba(255,255,255,0.3)";
+                compositeCtx.lineWidth = 1;
+                compositeCtx.beginPath();
+                compositeCtx.roundRect(cw - camW - margin, ch - camH - margin, camW, camH, 8);
+                compositeCtx.stroke();
+            } catch (_) { }
+        }
+
+        rafId = requestAnimationFrame(desenhar);
+    }
+
+    desenhar();
+}
+
+// ── substitui startRecording() completamente ─────────────────────────
 function startRecording(stream) {
+    criarCompositeCanvas();
+    iniciarLoopComposicao();
 
-    let mimeType = "video/webm";
-    if (!MediaRecorder.isTypeSupported(mimeType)) mimeType = "";
+    let fonteDoStream;
+    let mimeType;
 
-    recorder = new MediaRecorder(stream, {
+    // tenta composite — se captureStream não existir ou não retornar tracks, cai no fallback
+    try {
+        const testStream = compositeCanvas.captureStream(30);
+
+        if (testStream.getVideoTracks().length > 0) {
+            // iOS 15.4+ / Android — composite funciona
+            const audioTrack = stream.getAudioTracks()[0];
+            if (audioTrack) testStream.addTrack(audioTrack);
+            fonteDoStream = testStream;
+        } else {
+            throw new Error("captureStream sem tracks");
+        }
+    } catch (_) {
+        // iOS antigo — grava só a câmera frontal
+        cancelAnimationFrame(rafId); // para o loop inútil
+        fonteDoStream = stream;
+    }
+
+    mimeType = MediaRecorder.isTypeSupported("video/webm;codecs=vp8,opus")
+        ? "video/webm;codecs=vp8,opus"
+        : MediaRecorder.isTypeSupported("video/mp4")
+            ? "video/mp4"
+            : "";
+
+    recorder = new MediaRecorder(fonteDoStream, {
         ...(mimeType ? { mimeType } : {}),
-        videoBitsPerSecond: 300_000, // 300kbps — padrão é ~2.5Mbps
-        audioBitsPerSecond: 32_000,  // 32kbps mono é suficiente
+        videoBitsPerSecond: 600_000,
+        audioBitsPerSecond: 32_000,
     });
 
-
-    recorder.ondataavailable = event => {
-        if (event.data.size > 0) recordedChunks.push(event.data);
+    recorder.ondataavailable = e => {
+        if (e.data.size > 0) recordedChunks.push(e.data);
     };
 
     let resolveUploadDone;
-    window._uploadDone = new Promise(resolve => { resolveUploadDone = resolve; });
+    window._uploadDone = new Promise(r => { resolveUploadDone = r; });
 
     recorder.onstop = async () => {
+        cancelAnimationFrame(rafId);
+        const ext = mimeType.includes("mp4") ? "mp4" : "webm";
         const blob = new Blob(recordedChunks, { type: mimeType || "video/mp4" });
-        await uploadVideo(blob);
-        stream.getTracks().forEach(track => track.stop());
+        await uploadVideo(blob, ext);
+        stream.getTracks().forEach(t => t.stop());
         resolveUploadDone();
     };
 
     recorder.start();
-    // ← sem setTimeout aqui
-}
+  }
 
 async function playMediaSequence() {
 
@@ -128,11 +213,12 @@ function showVideo(src) {
 }
 
 // uploadVideo com retry e backoff
-async function uploadVideo(blob, tentativas = 3) {
+async function uploadVideo(blob, ext = "webm", tentativas = 3) {
     for (let i = 0; i < tentativas; i++) {
         try {
             const formData = new FormData();
-            formData.append("video", blob, `reaction-${Date.now()}.webm`);
+            formData.append("video", blob, `reaction-${Date.now()}.${ext}`);
+  
 
             const res = await fetch("/api/upload", {
                 method: "POST",
