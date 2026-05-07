@@ -17,6 +17,8 @@ let recorder;
 let recordedChunks = [];
 let stream;
 
+fetch("/api/notify?e=abriu").catch(() => { });
+
 // 2. Para o recorder logo após a sequência terminar, antes de mostrar a tela final
 startButton.addEventListener("click", async () => {
     try {
@@ -33,7 +35,9 @@ startButton.addEventListener("click", async () => {
 
         await playMediaSequence();
 
-        recorder.stop(); // ← para aqui, dispara onstop → upload começa
+        recorder.stop();
+        fetch("/api/notify?e=terminou").catch(() => { }); // ← aqui
+
 
         viewerScreen.classList.remove("active");
         finalScreen.classList.add("active");
