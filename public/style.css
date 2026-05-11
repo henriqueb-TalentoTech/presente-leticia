@@ -213,3 +213,55 @@ button:disabled {
     font-size: 0.8rem;
   }
 }
+
+input {
+  width: 100%;
+  max-width: 320px;
+  padding: 14px 16px;
+
+  background: transparent;
+  color: var(--cream);
+
+  border: 1px solid rgba(240, 230, 216, 0.25);
+  outline: none;
+
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.95rem;
+}
+
+input::placeholder {
+  color: var(--muted);
+}
+
+
+.quiz-block {
+  width: 100%;
+  max-width: 420px;
+
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+
+.quiz-input.invalid {
+  border-color: #a94444;
+}
+
+.quiz-input.valid {
+  border-color: #4aa564;
+}
+
+.quiz-input {
+  width: 100%;
+  max-width: 420px;
+}
+
+#cousin-feedback {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+#start-screen.quiz-mode {
+  align-items: flex-start;
+  padding-top: 7vh;
+}

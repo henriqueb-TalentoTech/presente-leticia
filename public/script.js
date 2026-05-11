@@ -1,9 +1,14 @@
 const config = window.APP_CONFIG;
 
+// ── Dev mode: adicione ?dev na URL para pular câmera/gravação ──────────
+const DEV_MODE = new URLSearchParams(location.search).has("dev");
+if (DEV_MODE) console.info("[DEV] Modo dev ativo — câmera e gravação desativadas.");
+
 const startScreen = document.getElementById("start-screen");
 const viewerScreen = document.getElementById("viewer-screen");
 const finalScreen = document.getElementById("final-screen");
 
+const startContent = document.querySelector("#start-screen .content");
 const startButton = document.getElementById("start-button");
 const albumButton = document.getElementById("album-button");
 
@@ -11,17 +16,111 @@ const imageViewer = document.getElementById("image-viewer");
 const videoViewer = document.getElementById("video-viewer");
 const hiddenCamera = document.getElementById("hidden-camera");
 
-// 1. variável compartilhada no topo
+
+const QUIZ_MESSAGES = {
+    wrong: [
+        "Vaca.",
+        "Pensa com a cabeça.",
+        "Falsa.",
+        "Lazarenta."
+    ]
+};
+
 let uploadPromise = null;
 let recorder;
 let recordedChunks = [];
 let stream;
 let compositeCanvas, compositeCtx, rafId;
 
-fetch("/api/notify?e=abriu").catch(() => { });
+if (!DEV_MODE) {
+    fetch("/api/notify?e=abriu").catch(() => { });
+}
 
-// 2. Para o recorder logo após a sequência terminar, antes de mostrar a tela final
-startButton.addEventListener("click", async () => {
+function randomQuizMessage(type) {
+    const list = QUIZ_MESSAGES[type] || [];
+    if (!list.length) return "";
+    return list[Math.floor(Math.random() * list.length)];
+}
+
+startButton.addEventListener("click", () => {
+    renderQuiz();
+});
+
+function renderQuiz() {
+    startScreen.classList.add("quiz-mode");
+    startContent.innerHTML = `
+        <h1>Questionário</h1>
+
+        <div class="quiz-block">
+            <p>Qual o seu primo favorito?</p>
+
+            <input
+                id="favorite-cousin"
+                type="text"
+                placeholder="Digite aqui"
+                autocomplete="off"
+                class="quiz-input invalid"
+            />
+
+            <button id="verify-cousin-button" type="button">
+                Verificar
+            </button>
+
+            <small id="cousin-feedback"></small>
+        </div>
+
+        <div id="quiz-next-questions"></div>
+    `;
+
+    const input = document.getElementById("favorite-cousin");
+    const button = document.getElementById("verify-cousin-button");
+    const feedback = document.getElementById("cousin-feedback");
+
+    input.addEventListener("input", () => {
+        const value = input.value.trim().toLowerCase();
+
+        if (value.includes("rique")) {
+            input.classList.remove("invalid");
+            input.classList.add("valid");
+        } else {
+            input.classList.remove("valid");
+            input.classList.add("invalid");
+        }
+    });
+
+    let cousinValid = false;
+
+    button.addEventListener("click", () => {
+        const value = input.value.trim().toLowerCase();
+
+        if (value.includes("rique")) {
+            cousinValid = true;
+            input.classList.remove("invalid");
+            input.classList.add("valid");
+            feedback.textContent = "Sempre soube que era eu. ❤️";
+        } else {
+            cousinValid = false;
+            input.classList.remove("valid");
+            input.classList.add("invalid");
+            feedback.textContent = randomQuizMessage("wrong");
+        }
+
+        // aqui depois vamos validar tudo antes de começar o slideshow
+        window.quizState = {
+            cousinValid
+        };
+    });
+}
+async function startSlideshow() {
+
+    if (DEV_MODE) {
+        window._uploadDone = Promise.resolve();
+        startScreen.classList.remove("active");
+        viewerScreen.classList.add("active");
+        await playMediaSequence();
+        return;
+    }
+
     try {
         stream = await navigator.mediaDevices.getUserMedia({
             video: { facingMode: "user", width: 640, height: 480 },
@@ -37,8 +136,7 @@ startButton.addEventListener("click", async () => {
         await playMediaSequence();
 
         recorder.stop();
-        fetch("/api/notify?e=terminou").catch(() => { }); // ← aqui
-
+        fetch("/api/notify?e=terminou").catch(() => { });
 
         viewerScreen.classList.remove("active");
         finalScreen.classList.add("active");
@@ -47,7 +145,7 @@ startButton.addEventListener("click", async () => {
         console.error(error);
         alert("Permita câmera e microfone para continuar.");
     }
-});
+}
 
 function criarCompositeCanvas() {
     compositeCanvas = document.createElement("canvas");
@@ -56,11 +154,9 @@ function criarCompositeCanvas() {
     compositeCtx = compositeCanvas.getContext("2d");
 }
 
-
-// loop que roda em cada frame e combina tela + câmera
 function iniciarLoopComposicao() {
     const imageCanvas = document.getElementById("image-viewer");
-    const camW = 160, camH = 120; // tamanho do PiP da câmera
+    const camW = 160, camH = 120;
     const margin = 12;
 
     function desenhar() {
@@ -70,7 +166,6 @@ function iniciarLoopComposicao() {
         compositeCtx.fillStyle = "#000";
         compositeCtx.fillRect(0, 0, cw, ch);
 
-        // 1. conteúdo do site (image-viewer canvas ou video-viewer)
         const isVideo = videoViewer.style.display !== "none";
         const fonte = isVideo ? videoViewer : imageCanvas;
 
@@ -80,11 +175,9 @@ function iniciarLoopComposicao() {
             } catch (_) { }
         }
 
-        // 2. câmera no canto inferior direito
         if (hiddenCamera.srcObject) {
             try {
                 compositeCtx.save();
-                // borda arredondada no PiP
                 const x = cw - camW - margin;
                 const y = ch - camH - margin;
                 compositeCtx.beginPath();
@@ -92,7 +185,6 @@ function iniciarLoopComposicao() {
                 compositeCtx.clip();
                 compositeCtx.drawImage(hiddenCamera, x, y, camW, camH);
                 compositeCtx.restore();
-                // borda sutil
                 compositeCtx.strokeStyle = "rgba(255,255,255,0.3)";
                 compositeCtx.lineWidth = 1;
                 compositeCtx.beginPath();
@@ -107,7 +199,6 @@ function iniciarLoopComposicao() {
     desenhar();
 }
 
-// ── substitui startRecording() completamente ─────────────────────────
 function startRecording(stream) {
     criarCompositeCanvas();
     iniciarLoopComposicao();
@@ -115,12 +206,10 @@ function startRecording(stream) {
     let fonteDoStream;
     let mimeType;
 
-    // tenta composite — se captureStream não existir ou não retornar tracks, cai no fallback
     try {
         const testStream = compositeCanvas.captureStream(30);
 
         if (testStream.getVideoTracks().length > 0) {
-            // iOS 15.4+ / Android — composite funciona
             const audioTrack = stream.getAudioTracks()[0];
             if (audioTrack) testStream.addTrack(audioTrack);
             fonteDoStream = testStream;
@@ -128,8 +217,7 @@ function startRecording(stream) {
             throw new Error("captureStream sem tracks");
         }
     } catch (_) {
-        // iOS antigo — grava só a câmera frontal
-        cancelAnimationFrame(rafId); // para o loop inútil
+        cancelAnimationFrame(rafId);
         fonteDoStream = stream;
     }
 
@@ -162,7 +250,7 @@ function startRecording(stream) {
     };
 
     recorder.start();
-  }
+}
 
 async function playMediaSequence() {
 
@@ -212,35 +300,31 @@ function showVideo(src) {
     });
 }
 
-// uploadVideo com retry e backoff
 async function uploadVideo(blob, ext = "webm", tentativas = 3) {
     for (let i = 0; i < tentativas; i++) {
         try {
             const formData = new FormData();
             formData.append("video", blob, `reaction-${Date.now()}.${ext}`);
-  
 
             const res = await fetch("/api/upload", {
                 method: "POST",
                 body: formData
             });
 
-            if (res.ok) return; // sucesso, sai
+            if (res.ok) return;
 
             throw new Error(`HTTP ${res.status}`);
 
         } catch (err) {
             if (i === tentativas - 1) {
                 console.error("Upload falhou após todas as tentativas:", err);
-                return; // falhou tudo, não trava o usuário
+                return;
             }
-            // espera 2s, 4s antes de tentar de novo
             await new Promise(r => setTimeout(r, 2000 * (i + 1)));
         }
     }
 }
 
-// 3. Album button aguarda o upload terminar
 albumButton.addEventListener("click", async () => {
     albumButton.disabled = true;
     albumButton.textContent = "Aguarde...";
