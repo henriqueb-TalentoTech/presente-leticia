@@ -261,7 +261,307 @@ input::placeholder {
   color: var(--muted);
 }
 
+#cousin-feedback.valid   { color: #4aa564; }
+#cousin-feedback.invalid { color: #a94444; }
+
 #start-screen.quiz-mode {
   align-items: flex-start;
   padding-top: 7vh;
+  overflow-y: auto;
+}
+
+#start-screen .content.quiz-mode {
+  width: min(92vw, 520px);
+  max-width: 520px;
+  padding-bottom: 6rem;
+}
+
+#quiz-next-questions {
+  width: 100%;
+  margin-top: 1.4rem;
+
+  display: flex;
+  flex-direction: column;
+  gap: 1.6rem;
+}
+
+.birthday-row {
+  display: flex;
+  gap: 0.6rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.birthday-input {
+  width: 72px;
+  text-align: center;
+}
+
+#birthday-year {
+  width: 96px;
+}
+
+.quiz-feedback {
+  display: none;
+
+  margin-top: 0.5rem;
+  padding: 14px 36px;
+
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.875rem;
+  font-weight: 400;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+
+  border: 1px solid rgba(240, 230, 216, 0.25);
+  border-radius: 2px;
+
+  min-width: 220px;
+  text-align: center;
+}
+
+.quiz-feedback.success {
+  display: inline-block;
+  border-color: #4aa564;
+  color: #4aa564;
+}
+
+.radio-row {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.9rem;
+  width: 100%;
+}
+.radio-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+
+  padding: 0.55rem 1rem;
+
+  border: 1px solid rgba(240, 230, 216, 0.12);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.018);
+
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+
+  transition: border-color 180ms ease, background 180ms ease;
+}
+
+/* Esconde o input nativo mas mantém acessível */
+.radio-option input[type="radio"] {
+  appearance: none;
+  -webkit-appearance: none;
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0,0,0,0);
+  border: 0;
+}
+
+/* Círculo externo */
+.radio-dot {
+  width: 18px;
+  height: 18px;
+  min-width: 18px;
+  border-radius: 50%;
+  border: 2px solid rgba(240, 230, 216, 0.30);
+  background: transparent;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  transition: border-color 180ms ease;
+}
+
+/* Bolinha interna (quando selecionado) */
+.radio-dot::after {
+  content: '';
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: transparent;
+  transition: background 180ms ease;
+}
+
+/* Estados quando selecionado — usa :has() no label */
+.radio-option:has(input:checked) {
+  border-color: rgba(201, 123, 110, 0.45);
+  background: rgba(201, 123, 110, 0.10);
+}
+
+.radio-option:has(input:checked) .radio-dot {
+  border-color: var(--rose);
+}
+
+.radio-option:has(input:checked) .radio-dot::after {
+  background: var(--rose);
+}
+
+/* Texto */
+.radio-option span:last-child {
+  font-size: 0.88rem;
+  color: rgba(240, 230, 216, 0.82);
+  transition: color 180ms ease;
+}
+
+.radio-option:has(input:checked) span:last-child {
+  color: var(--cream);
+}
+
+.radio-option:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+
+#quiz-continue-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+}
+
+.continue-arrow {
+  display: inline-flex;
+  align-items: center;
+}
+
+.continue-arrow svg {
+  width: 16px;
+  height: 16px;
+}
+
+
+/* ── Termo ─────────────────────────────────────────── */
+
+.terms-box {
+  width: 100%;
+  max-width: 520px;
+
+  padding: 1.4rem 1.3rem;
+
+  border: 1px solid rgba(240, 230, 216, 0.12);
+  background:
+    linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.02),
+      rgba(255, 255, 255, 0.01)
+    );
+
+  backdrop-filter: blur(2px);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.03),
+    0 12px 28px rgba(0,0,0,0.22);
+
+  text-align: left;
+  line-height: 1.75;
+}
+
+.terms-box p {
+  max-width: none;
+  margin-bottom: 1rem;
+  animation: none;
+}
+
+.terms-box strong {
+  color: var(--cream);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+
+.terms-check-block {
+  width: 100%;
+  max-width: 520px;
+  padding: 0.85rem 1rem;
+
+  border: 1px solid rgba(240, 230, 216, 0.10);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.018);
+}
+
+.terms-check {
+  width: 100%;
+
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-start;
+  gap: 0.65rem;
+
+  text-align: left;
+  cursor: pointer;
+}
+
+.terms-check span {
+  line-height: 1.45;
+}
+
+/* Esconde o nativo */
+.terms-check input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0,0,0,0);
+  border: 0;
+}
+
+/* Quadrado custom */
+.check-dot {
+  width: 18px;
+  height: 18px;
+  min-width: 18px;
+  border-radius: 5px;
+  border: 2px solid rgba(240, 230, 216, 0.30);
+  background: transparent;
+
+  margin-top: 0.1rem;
+  flex-shrink: 0;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  transition: border-color 180ms ease, background 180ms ease;
+}
+
+/* Checkmark via SVG inline */
+.check-dot::after {
+  content: '';
+  width: 10px;
+  height: 10px;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 10 10' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1.5 5l2.5 2.5 4.5-4.5' stroke='%23f0e6d8' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3C/svg%3E");
+  background-size: contain;
+  background-repeat: no-repeat;
+  opacity: 0;
+  transition: opacity 150ms ease;
+}
+
+/* Checked */
+.terms-check:has(input:checked) .check-dot {
+  background: var(--rose);
+  border-color: var(--rose);
+}
+
+.terms-check:has(input:checked) .check-dot::after {
+  opacity: 1;
+}
+
+.quiz-block {
+  animation: fadeUp var(--duration) ease both;
+}
+
+#quiz-next-questions > .quiz-block {
+  animation: fadeUp var(--duration) ease both;
 }

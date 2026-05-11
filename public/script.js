@@ -51,8 +51,8 @@ function renderQuiz() {
     startContent.innerHTML = `
         <h1>Questionário</h1>
 
-        <div class="quiz-block">
-            <p>Qual o seu primo favorito?</p>
+        <div class="quiz-block quiz-animated">
+            <h2>Qual o seu primo favorito?</h2>
 
             <input
                 id="favorite-cousin"
@@ -66,7 +66,7 @@ function renderQuiz() {
                 Verificar
             </button>
 
-            <small id="cousin-feedback"></small>
+            <small id="cousin-feedback" class="quiz-feedback"></small>
         </div>
 
         <div id="quiz-next-questions"></div>
@@ -80,11 +80,19 @@ function renderQuiz() {
         const value = input.value.trim().toLowerCase();
 
         if (value.includes("rique")) {
+            cousinValid = true;
             input.classList.remove("invalid");
             input.classList.add("valid");
+            feedback.textContent = "Sempre soube que era eu. ❤️";
+            feedback.classList.remove("invalid");  // ← adiciona
+            feedback.classList.add("valid");       // ← adiciona
         } else {
+            cousinValid = false;
             input.classList.remove("valid");
             input.classList.add("invalid");
+            feedback.textContent = randomQuizMessage("wrong");
+            feedback.classList.remove("valid");    // ← adiciona
+            feedback.classList.add("invalid");     // ← adiciona
         }
     });
 
@@ -97,20 +105,327 @@ function renderQuiz() {
             cousinValid = true;
             input.classList.remove("invalid");
             input.classList.add("valid");
+
+            button.style.display = "none";
             feedback.textContent = "Sempre soube que era eu. ❤️";
+            feedback.classList.add("success");
+            feedback.style.display = "inline-block";
+
+            if (!document.getElementById("birthday-question")) {
+                renderBirthdayQuestion();
+            }
+
         } else {
             cousinValid = false;
             input.classList.remove("valid");
             input.classList.add("invalid");
+
+            button.style.display = "";
             feedback.textContent = randomQuizMessage("wrong");
+            feedback.classList.remove("success");
+            feedback.style.display = "inline-block";
         }
 
-        // aqui depois vamos validar tudo antes de começar o slideshow
         window.quizState = {
+            ...window.quizState,
             cousinValid
         };
     });
 }
+
+function renderBirthdayQuestion() {
+    const container = document.getElementById("quiz-next-questions");
+
+    container.innerHTML = `
+        <div class="quiz-block" id="birthday-question">
+            <h2>Qual o aniversário dele?</h2>
+
+            <div class="birthday-row">
+                <input
+                    id="birthday-day"
+                    type="text"
+                    inputmode="numeric"
+                    maxlength="2"
+                    placeholder="DD"
+                    class="quiz-input invalid birthday-input"
+                />
+
+                <input
+                    id="birthday-month"
+                    type="text"
+                    inputmode="numeric"
+                    maxlength="2"
+                    placeholder="MM"
+                    class="quiz-input invalid birthday-input"
+                />
+
+                <input
+                    id="birthday-year"
+                    type="text"
+                    inputmode="numeric"
+                    maxlength="4"
+                    placeholder="YYYY"
+                    class="quiz-input invalid birthday-input"
+                />
+            </div>
+
+            <button id="verify-birthday-button" type="button">
+                Verificar
+            </button>
+
+            <small id="birthday-feedback" class="quiz-feedback"></small>
+        </div>
+    `;
+
+    const day = document.getElementById("birthday-day");
+    const month = document.getElementById("birthday-month");
+    const year = document.getElementById("birthday-year");
+
+    const button = document.getElementById("verify-birthday-button");
+    const feedback = document.getElementById("birthday-feedback");
+
+    const inputs = [day, month, year];
+
+    const CORRECT = { day: "29", month: "05", year: "2008" };
+
+    function validateBirthday() {
+        day.classList.toggle("valid", day.value === CORRECT.day);
+        day.classList.toggle("invalid", day.value !== CORRECT.day);
+
+        month.classList.toggle("valid", month.value === CORRECT.month);
+        month.classList.toggle("invalid", month.value !== CORRECT.month);
+
+        year.classList.toggle("valid", year.value === CORRECT.year);
+        year.classList.toggle("invalid", year.value !== CORRECT.year);
+
+        return day.value === CORRECT.day &&
+            month.value === CORRECT.month &&
+            year.value === CORRECT.year;
+    }
+
+    inputs.forEach(input => {
+        input.addEventListener("input", () => {
+            input.value = input.value.replace(/\D/g, "");
+            validateBirthday();
+        });
+    });
+
+    button.addEventListener("click", () => {
+        const birthdayValid = validateBirthday();
+
+        if (birthdayValid) {
+            button.style.display = "none";
+            feedback.textContent = "Acertou. ❤️";
+            feedback.classList.add("success");
+            feedback.style.display = "inline-block";
+            if (!document.getElementById("gift-question")) {
+                renderGiftQuestion();
+            }
+        } else {
+            button.style.display = "";
+            feedback.textContent = randomQuizMessage("wrong");
+            feedback.classList.remove("success");
+            feedback.style.display = "inline-block";
+        }
+
+        window.quizState = {
+            ...window.quizState,
+            birthdayValid
+        };
+    });
+}
+
+function renderGiftQuestion() {
+    const container = document.getElementById("quiz-next-questions");
+
+    const block = document.createElement("div");
+    block.className = "quiz-block";
+    block.id = "gift-question";
+
+    block.innerHTML = `
+    <h2>Vou dar um presente de aniversário para ele?</h2>
+
+    <div class="radio-row">
+        <label class="radio-option">
+            <input type="radio" name="gift-answer" value="Sim" />
+            <span class="radio-dot"></span>
+            <span>Sim</span>
+        </label>
+
+        <label class="radio-option">
+            <input type="radio" name="gift-answer" value="Com certeza" />
+            <span class="radio-dot"></span>
+            <span>Com certeza</span>
+        </label>
+    </div>
+
+    <button id="verify-gift-button" type="button">
+        Verificar
+    </button>
+
+    <small id="gift-feedback" class="quiz-feedback"></small>
+`;
+    container.appendChild(block);
+
+    const button = document.getElementById("verify-gift-button");
+    const feedback = document.getElementById("gift-feedback");
+
+    button.addEventListener("click", () => {
+        const selected = document.querySelector('input[name="gift-answer"]:checked');
+
+        if (!selected) {
+            feedback.textContent = "Escolha uma opção.";
+            feedback.classList.remove("success");
+            feedback.style.display = "inline-block";
+            return;
+        }
+
+        button.style.display = "none";
+        feedback.textContent = "Estou esperando!";
+        feedback.classList.add("success");
+        feedback.style.display = "inline-block";
+
+        window.quizState = {
+            ...window.quizState,
+            giftValid: true
+        };
+        renderContinueButton();
+    });
+}
+
+function renderContinueButton() {
+    if (document.getElementById("quiz-continue-button")) return;
+
+    const { cousinValid, birthdayValid, giftValid } = window.quizState || {};
+
+    if (!cousinValid || !birthdayValid || !giftValid) return;
+
+    const container = document.getElementById("quiz-next-questions");
+
+    const wrapper = document.createElement("div");
+    wrapper.className = "quiz-block";
+
+    wrapper.innerHTML = `
+        <button id="quiz-continue-button" type="button">
+            Continuar
+            <span class="continue-arrow">
+                <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                    <path fill-rule="evenodd" d="M3 10a1 1 0 011-1h9.586l-2.293-2.293a1 1 0 111.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L13.586 11H4a1 1 0 01-1-1z" clip-rule="evenodd"/>
+                </svg>
+            </span>
+        </button>
+    `;
+
+    container.appendChild(wrapper);
+
+    document.getElementById("quiz-continue-button")
+        .addEventListener("click", () => {
+            renderTermsScreen();
+        });
+}
+
+function renderTermsScreen() {
+    startContent.innerHTML = `
+        <h1>Antes de prosseguir com o presente, você precisa aceitar o termo.</h1>
+
+        <div class="terms-box">
+        <p><strong>Das partes do contrato</strong></p>
+
+        <p>
+            Pelo presente instrumento particular, de um lado a parte concedente,
+            Henrique, e de outro a parte recebedora, Leticia, fica ajustado e
+            convencionado o presente Termo de Aceite, de caráter pessoal,
+            confidencial, simbólico e intransferível.
+        </p>
+
+        <p>
+            A parte recebedora declara, neste ato, estar ciente de que o conteúdo
+            subsequente poderá ocasionar surpresa, constrangimento moderado,
+            vergonha involuntária, ódio, até mesmo vontade chorar ou reações emocionais
+            correlatas, comprometendo-se, desde já, a não dirigir qualquer
+            manifestação de irritação, braveza, rancor ou represália moral à
+            parte concedente.
+        </p>
+
+        <p>
+            Fica expressamente vedado à parte recebedora compartilhar, reproduzir,
+            divulgar, encaminhar, gravar, disponibilizar ou permitir acesso, ainda
+            que parcial, ao conteúdo deste presente por qualquer meio físico,
+            digital ou verbal, sem autorização prévia e expressa da parte
+            concedente.
+        </p>
+
+        <p>
+            O descumprimento da cláusula de confidencialidade poderá ensejar a
+            aplicação de penalidades de natureza moral, social e afetiva,
+            compreendendo, sem limitação, constrangimento proporcional,
+            cobranças futuras, lembranças inconvenientes em datas oportunas e
+            invocação reiterada do argumento “eu avisei”.
+        </p>
+
+        <p>
+            Eventual quebra das disposições ora pactuadas poderá caracterizar
+            inadimplemento contratual, sujeitando a parte infratora às medidas
+            cabíveis no âmbito da jurisdição competente, inclusive
+            abertura de processos, denúncias a unidades competentes
+            e reclamações formais sem prazo prescricional definido.
+        </p>
+
+        <p>
+            Fica ainda reconhecido que, uma vez iniciado o conteúdo da surpresa,
+            operar-se-á aceitação irretratável e irrevogável, não sendo admitido
+            arrependimento posterior, recusa superveniente ou alegação de
+            desconhecimento das cláusulas ora estabelecidas.
+        </p>
+        </div>
+
+        <div class="quiz-block terms-check-block">
+    <label class="terms-check">
+        <input type="checkbox" id="terms-checkbox" />
+        <span class="check-dot"></span>
+        <span>Eu aceito os termos e condições acima.</span>
+    </label>
+</div>
+
+<button id="terms-continue-button" type="button" disabled>
+    Continuar
+</button>
+    `;
+
+    const checkbox = document.getElementById("terms-checkbox");
+    const button = document.getElementById("terms-continue-button");
+
+    checkbox.addEventListener("change", () => {
+        button.disabled = !checkbox.checked;
+    });
+
+    button.addEventListener("click", () => {
+        renderReadyScreen();
+    });
+}
+
+function renderReadyScreen() {
+    startScreen.classList.remove("quiz-mode");
+    startContent.classList.remove("quiz-mode");
+
+    startContent.innerHTML = `
+        <h1>Agora sim, a sua surpresa!</h1>
+
+        <p>
+            Para poder assistir, por favor permita a câmera e o microfone
+        </p>
+
+        <button id="ready-start-button" type="button">
+            Começar
+        </button>
+    `;
+
+    document.getElementById("ready-start-button")
+        .addEventListener("click", async () => {
+            await startSlideshow();
+        });
+}
+
 async function startSlideshow() {
 
     if (DEV_MODE) {
