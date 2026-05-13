@@ -126,7 +126,7 @@ function renderQuiz() {
                 type="text"
                 placeholder="Digite aqui"
                 autocomplete="off"
-                class="quiz-input invalid"
+                class="quiz-input"
             />
 
             <button id="verify-cousin-button" type="button">
@@ -144,17 +144,6 @@ function renderQuiz() {
     const feedback = document.getElementById("cousin-feedback");
 
     let cousinValid = false;
-
-    input.addEventListener("input", () => {
-        const value = input.value.trim().toLowerCase();
-        cousinValid = value.includes("rique");
-
-        input.classList.toggle("valid", cousinValid);
-        input.classList.toggle("invalid", !cousinValid);
-        feedback.classList.toggle("valid", cousinValid);
-        feedback.classList.toggle("invalid", !cousinValid);
-        if (cousinValid) feedback.textContent = "Sempre soube que era eu. ❤️";
-    });
 
     button.addEventListener("click", () => {
         const value = input.value.trim().toLowerCase();
@@ -187,9 +176,9 @@ function renderBirthdayQuestion() {
             <h2>Qual o aniversário dele?</h2>
 
             <div class="birthday-row">
-                <input id="birthday-day"   type="text" inputmode="numeric" maxlength="2" placeholder="DD"   class="quiz-input invalid birthday-input" />
-                <input id="birthday-month" type="text" inputmode="numeric" maxlength="2" placeholder="MM"   class="quiz-input invalid birthday-input" />
-                <input id="birthday-year"  type="text" inputmode="numeric" maxlength="4" placeholder="YYYY" class="quiz-input invalid birthday-input" />
+                <input id="birthday-day"   type="text" inputmode="numeric" maxlength="2" placeholder="DD"   class="quiz-input birthday-input" />
+                <input id="birthday-month" type="text" inputmode="numeric" maxlength="2" placeholder="MM"   class="quiz-input birthday-input" />
+                <input id="birthday-year"  type="text" inputmode="numeric" maxlength="4" placeholder="YYYY" class="quiz-input birthday-input" />
             </div>
 
             <button id="verify-birthday-button" type="button">Verificar</button>
@@ -221,7 +210,6 @@ function renderBirthdayQuestion() {
     [day, month, year].forEach(input => {
         input.addEventListener("input", () => {
             input.value = input.value.replace(/\D/g, "");
-            validateBirthday();
         });
     });
 
